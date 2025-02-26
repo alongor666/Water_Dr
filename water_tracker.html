@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康饮水助手</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f5ff;
+            color: #333;
+        }
+        
+        header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .container {
+            padding: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .settings-btn {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        .progress-container {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        
+        .water-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #2563eb;
+        }
+        
+        .water-log {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .reminder {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .custom-amount {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .custom-amount button {
+            width: 40px;
+        }
+        
+        .custom-amount input {
+            width: 80px;
+            text-align: center;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>健康饮水助手</h1>
+        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+    </header>
+    
+    <div class="container">
+        <div id="settings" class="card hidden">
+            <h2>个人设置</h2>
+            <div class="form-group">
+                <label for="weight">体重 (公斤)</label>
+                <input type="number" id="weight" value="70" min="30" max="200">
+            </div>
+            <div class="form-group">
+                <label for="age">年龄</label>
+                <input type="number" id="age" value="30" min="1" max="120">
+            </div>
+            <div class="form-group">
+                <label for="gender">性别</label>
+                <select id="gender">
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="activity">活动水平</label>
+                <select id="activity">
+                    <option value="low">低（主要久坐）</option>
+                    <option value="moderate">中（适度活动）</option>
+                    <option value="high">高（剧烈运动）</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="climate">气候</label>
+                <select id="climate">
+                    <option value="temperate">温和</option>
+                    <option value="hot">炎热</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <p>推荐每日饮水量: <span id="recommended-amount">2100</span> 毫升</p>
+            </div>
+            <button onclick="saveSettings()">保存设置</button>
+        </div>
+        
+        <div id="main-screen">
+            <div class="card">
+                <h2>今日饮水进度</h2>
+                <p>已饮水量: <span id="current-amount">0</span> / <span id="target-amount">2100</span> 毫升</p>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="reminder">
+                    <span>下次提醒: <span id="next-reminder">2小时后</span></span>
+                    <button onclick="resetDay()">重置</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>记录饮水</h2>
+                <div class="water-buttons">
+                    <button onclick="addWater(150)">小杯 (150ml)</button>
+                    <button onclick="addWater(250)">中杯 (250ml)</button>
+                    <button onclick="addWater(500)">大杯 (500ml)</button>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button onclick="toggleCustomAmount()" id="custom-btn">自定义</button>
+                </div>
+                <div id="custom-amount-container" class="hidden" style="margin-top: 10px;">
+                    <div class="custom-amount">
+                        <button onclick="adjustCustomAmount(-50)">-</button>
+                        <input type="number" id="custom-amount" value="100" min="10" step="10">
+                        <button onclick="adjustCustomAmount(50)">+</button>
+                    </div>
+                    <button onclick="addCustomWater()">添加</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>今日饮水记录</h2>
+                <div id="water-log" class="water-log">
+                    <p id="empty-log" style="text-align: center; color: #666;">今日还没有饮水记录，开始记录吧！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始数据
+        let userInfo = {
+            weight: 70,
+            age: 30,
+            gender: 'male',
+            activity: 'moderate',
+            climate: 'temperate'
+        };
+        
+        let waterGoal = 2100;
+        let currentIntake = 0;
+        let intakeHistory = [];
+        let nextReminderTime = null;
+        
+        // 从本地存储加载数据
+        function loadData() {
+            const savedUserInfo = localStorage.getItem('userInfo');
+            const savedWaterGoal = localStorage.getItem('waterGoal');
+            const savedCurrentIntake = localStorage.getItem('currentIntake');
+            const savedIntakeHistory = localStorage.getItem('intakeHistory');
+            const savedDate = localStorage.getItem('savedDate');
+            
+            // 检查是否是新的一天
+            const today = new Date().toDateString();
+            if (savedDate !== today) {
+                resetDay(false);
+                localStorage.setItem('savedDate', today);
+            } else {
+                if (savedUserInfo) userInfo = JSON.parse(savedUserInfo);
+                if (savedWaterGoal) waterGoal = parseInt(savedWaterGoal);
+                if (savedCurrentIntake) currentIntake = parseInt(savedCurrentIntake);
+                if (savedIntakeHistory) intakeHistory = JSON.parse(savedIntakeHistory);
+            }
+            
+            // 更新UI
+            updateUI();
+            
+            // 设置初始表单值
+            document.getElementById('weight').value = userInfo.weight;
+            document.getElementById('age').value = userInfo.age;
+            document.getElementById('gender').value = userInfo.gender;
+            document.getElementById('activity').value = userInfo.activity;
+            document.getElementById('climate').value = userInfo.climate;
+        }
+        
+        // 更新UI元素
+        function updateUI() {
+            document.getElementById('recommended-amount').textContent = waterGoal;
+            document.getElementById('target-amount').textContent = waterGoal;
+            document.getElementById('current-amount').textContent = currentIntake;
+            
+            // 更新进度条
+            const progressPercentage = Math.min((currentIntake / waterGoal) * 100, 100);
+            document.getElementById('progress-bar').style.width = progressPercentage + '%';
+            
+            // 更新饮水记录
+            updateWaterLog();
+            
+            // 更新下次提醒
+            updateNextReminder();
+        }
+        
+        // 更新水分摄入记录
+        function updateWaterLog() {
+            const logContainer = document.getElementById('water-log');
+            const emptyLog = document.getElementById('empty-log');
+            
+            if (intakeHistory.length === 0) {
+                emptyLog.style.display = 'block';
+                return;
+            }
+            
+            emptyLog.style.display = 'none';
+            
+            // 清空现有日志
+            while (logContainer.firstChild) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+            
+            // 添加新的日志条目
+            intakeHistory.forEach(entry => {
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+                
+                const timeSpan = document.createElement('span');
+                timeSpan.textContent = entry.time;
+                
+                const amountSpan = document.createElement('span');
+                amountSpan.textContent = '+' + entry.amount + ' 毫升';
+                amountSpan.style.color = '#3b82f6';
+                
+                logItem.appendChild(timeSpan);
+                logItem.appendChild(amountSpan);
+                
+                logContainer.appendChild(logItem);
+            });
+        }
+        
+        // 切换设置面板
+        function toggleSettings() {
+            const settings = document.getElementById('settings');
+            const mainScreen = document.getElementById('main-screen');
+            
+            if (settings.classList.contains('hidden')) {
+                settings.classList.remove('hidden');
+                mainScreen.classList.add('hidden');
+            } else {
+                settings.classList.add('hidden');
+                mainScreen.classList.remove('hidden');
+            }
+        }
+        
+        // 保存设置
+        function saveSettings() {
+            userInfo.weight = parseInt(document.getElementById('weight').value);
+            userInfo.age = parseInt(document.getElementById('age').value);
+            userInfo.gender = document.getElementById('gender').value;
+            userInfo.activity = document.getElementById('activity').value;
+            userInfo.climate = document.getElementById('climate').value;
+            
+            // 计算新的水分目标
+            waterGoal = calculateWaterGoal();
+            
+            // 保存到本地存储
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            localStorage.setItem('waterGoal', waterGoal.toString());
+            
+            // 更新UI
+            updateUI();
+            
+            // 返回主屏幕
+            toggleSettings();
+        }
+        
+        // 计算推荐的每日饮水量
+        function calculateWaterGoal() {
+            // 基础水分需求：体重(kg) * 30ml
+            let baseNeeds = userInfo.weight * 30;
+            
+            // 根据年龄调整
+            if (userInfo.age > 65) {
+                baseNeeds *= 0.9;
+            }
+            
+            // 根据活动水平调整
+            const activityMultiplier = {
+                'low': 1.0,
+                'moderate': 1.2,
+                'high': 1.5
+            };
+            
+            // 根据气候调整
+            const climateMultiplier = {
+                'temperate': 1.0,
+                'hot': 1.3
+            };
+            
+            // 性别调整（女性通常比男性需要稍少的水）
+            const genderMultiplier = userInfo.gender === 'female' ? 0.9 : 1.0;
+            
+            // 计算总目标
+            const calculatedGoal = Math.round(
+                baseNeeds * 
+                activityMultiplier[userInfo.activity] * 
+                climateMultiplier[userInfo.climate] *
+                genderMultiplier
+            );
+            
+            return calculatedGoal;
+        }
+        
+        // 添加水分
+        function addWater(amount) {
+            currentIntake += amount;
+            
+            // 获取当前时间
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0');
+            
+            // 添加到历史记录
+            intakeHistory.unshift({
+                time: timeString,
+                amount: amount
+            });
+            
+            // 保存到本地存储
+            localStorage.setItem('currentIntake', currentIntake.toString());
+            localStorage.setItem('intakeHistory', JSON.stringify(intakeHistory));
+            
+            // 更新UI
+            updateUI();
+            
+            // 检查是否达到目标
+            if (currentIntake >= waterGoal) {
+                alert('恭喜！您已达到今日饮水目标！继续保持良好的饮水习惯！');
+            }
+        }
+        
+        // 添加自定义水量
+        function addCustomWater() {
+            const amount = parseInt(document.getElementById('custom-amount').value);
+            if (amount > 0) {
+                addWater(amount);
+            }
+        }
+        
+        // 调整自定义水量
+        function adjustCustomAmount(change) {
+            const input = document.getElementById('custom-amount');
+            let value = parseInt(input.value) + change;
+            if (value < 10) value = 10;
+            input.value = value;
+        }
+        
+        // 切换自定义水量输入
+        function toggleCustomAmount() {
+            const container = document.getElementById('custom-amount-container');
+            const btn = document.getElementById('custom-btn');
+            
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                btn.textContent = '取消';
+            } else {
+                container.classList.add('hidden');
+                btn.textContent = '自定义';
+            }
+        }
+        
+        // 重置每日记录
+        function resetDay(showConfirm = true) {
+            if (showConfirm && !confirm('确定要重置今日的饮水记录吗？')) {
+                return;
+            }
+            
+            currentIntake = 0;
+            intakeHistory = [];
+            
+            // 保存到本地存储
+            localStorage.setItem('currentIntake', '0');
+            localStorage.setItem('intakeHistory', JSON.stringify([]));
+            
+            // 更新UI
+            updateUI();
+        }
+        
+        // 更新下次提醒时间
+        function updateNextReminder() {
+            if (!nextReminderTime) {
+                scheduleNextReminder();
+            }
+            
+            const now = new Date();
+            const timeDiff = nextReminderTime - now;
+            
+            if (timeDiff <= 0) {
+                showReminderNotification();
+                scheduleNextReminder();
+            }
+            
+            const minutes = Math.floor(timeDiff / 60000);
+            if (minutes < 60) {
+                document.getElementById('next-reminder').textContent = minutes + '分钟后';
+            } else {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                document.getElementById('next-reminder').textContent = hours + '小时' + (mins > 0 ? mins + '分钟' : '') + '后';
+            }
+        }
+        
+        // 安排下一次提醒
+        function scheduleNextReminder() {
+            const now = new Date();
+            const hours = now.getHours();
+            
+            // 早上8点到晚上10点之间，每2小时提醒一次
+            if (hours >= 8 && hours < 22) {
+                nextReminderTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+            } else {
+                // 设置为明天早上8点
+                nextReminderTime = new Date();
+                nextReminderTime.setDate(nextReminderTime.getDate() + 1);
+                nextReminderTime.setHours(8, 0, 0, 0);
+            }
+        }
+        
+        // 显示提醒通知
+        function showReminderNotification() {
+            alert('该喝水了！保持水分对您的健康非常重要。');
+        }
+        
+        // 设置定期更新计时器
+        setInterval(() => {
+            updateNextReminder();
+        }, 60000); // 每分钟更新一次
+        
+        // 页面加载时初始化
+        window.onload = loadData;
+    </script>
+</body>
+</html>
